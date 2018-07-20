@@ -1,0 +1,41 @@
+version: '3.3'
+services:
+  # workspace:
+  #   container_name: go-rest-api
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile-alternate
+  #   depends_on:
+  #     - mysql
+  #     - mongodb
+  mysql:
+    container_name: go-rest-api-mysql
+    image: mysql:8.0.3
+    restart: always
+    ports:
+      - 3306:3306
+    command: --init-file /docker-entrypoint-initdb.d/mysql-setup.sql
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: yay
+      MYSQL_DATABASE: yay
+  mongodb:
+    container_name: go-rest-api-mongodb
+    image: mongo:3.6.2
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    command: mongod --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: yay
+      MONGO_INITDB_DATABASE: yay    
+
+volumes:  
+  mongo_data:
+  mysql_data:

@@ -1,0 +1,1 @@
+db.order.insert({id: "000000", distance: 0, status: "UNASSIGN", origin: {lat: 0, long: 0}, destination: {lat: 0, long: 0}})
