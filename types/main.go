@@ -7,9 +7,4 @@ const (
 
 type Server interface {
 	Serve() bool
-	// Stop() bool
-	// GetPurchaseRequestChannel() chan PurchaseRequest
-	// GetPaymentResponseChannel() chan []byte
-	// GetPurchaseMetricChannel() chan<- MetricRecord
-	//Send(data []byte) bool
 }

@@ -1,4 +1,14 @@
 db:
   type: mysql
-api_server:
-  port: 8080
+  user: root
+  password: 
+  port: 3306
+  host: localhost
+  dbname: 
+server:
+  api:
+    port: 8080
+  graphql:
+utility: 
+  googlemapapi:
+    key: 

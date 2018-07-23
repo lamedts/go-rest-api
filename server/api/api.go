@@ -17,9 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	APILogger = logger.GetLogger("api")
-)
+var APILogger = logger.GetLogger("api")
 
 const maxRetryCount int = 5
 

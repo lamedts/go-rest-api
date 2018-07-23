@@ -22,7 +22,7 @@ type mysqlDB struct {
 	mutex *sync.RWMutex
 }
 
-func NewMysqlDB(mysqlConfig types.DatastoreSettings) *mysqlDB {
+func NewMysqlDB(mysqlConfig types.DatastoreConfig) *mysqlDB {
 	mysqlConnectionString := fmt.Sprintf("%s:%s@(%s:%d)/%s", mysqlConfig.User, mysqlConfig.Password, mysqlConfig.Host, mysqlConfig.Port, mysqlConfig.DBname)
 	sqlxdb, err := sqlx.Connect("mysql", mysqlConnectionString)
 	if err != nil {
@@ -52,6 +52,7 @@ func (db *mysqlDB) ReadOrder(page int, limit int) (*[]datastore.Order, error) {
 		"offset":  offset,
 		"limit":   limit,
 		"orderBy": "id",
+		"lastID":  "",
 	}
 	tx, _ := db.Beginx()
 

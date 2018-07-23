@@ -6,6 +6,7 @@ import (
 	"go-rest-api/server/api"
 	"go-rest-api/types"
 	typesDatastore "go-rest-api/types/datastore"
+	"go-rest-api/utility/googleapi"
 )
 
 var coreLogger = logger.GetLogger("core")
@@ -13,6 +14,7 @@ var coreLogger = logger.GetLogger("core")
 type Yay struct {
 	config  types.Config
 	servers []types.Server
+	mapAPI  *googlemapapi.GoogleMapAPI
 }
 
 var yayInstance *Yay
@@ -20,10 +22,10 @@ var yayInstance *Yay
 func GetYay(configuration *types.Config) *Yay {
 	apiEnabled := false
 	graphqlEnabled := false
-	if configuration.Servers.APIServerConfig != nil {
+	if configuration.ServerSettings.APIServerConfig != nil {
 		apiEnabled = true
 	}
-	if configuration.Servers.GraphqlServerConfig != nil {
+	if configuration.ServerSettings.GraphqlServerConfig != nil {
 		graphqlEnabled = true
 	}
 	coreLogger.Infof(".............    config    .............")
@@ -52,22 +54,33 @@ func GetYay(configuration *types.Config) *Yay {
 
 	coreLogger.Infoln("**          server Setup         **")
 	servers := []types.Server{}
-	if configuration.Servers.APIServerConfig != nil {
-		if apiServer := api.NewAPIServer(dataStore, configuration.Servers.APIServerConfig.Port); apiServer == nil {
+	if configuration.ServerSettings.APIServerConfig != nil {
+		if apiServer := api.NewAPIServer(dataStore, configuration.ServerSettings.APIServerConfig.Port); apiServer == nil {
 			coreLogger.Fatal("Failed to create apiserver")
 		} else {
 			servers = append(servers, apiServer)
 		}
 	}
-	if configuration.Servers.GraphqlServerConfig != nil {
+	if configuration.ServerSettings.GraphqlServerConfig != nil {
 		// TODO: graphql
 		coreLogger.Infof("implementation of graphql is pending")
 		// servers = append(servers, apiServer)
 	}
 
+	coreLogger.Infoln("**         utility Setup         **")
+	var mapAPI *googlemapapi.GoogleMapAPI
+	if configuration.UtilitySettings.GoogleMapAPIConfig != nil {
+		if utility := googlemapapi.NewGoogleMapAPI(configuration.UtilitySettings.GoogleMapAPIConfig.Key); utility == nil {
+			coreLogger.Fatal("Failed to set googlemapapi")
+		} else {
+			mapAPI = utility
+		}
+	}
+	mapAPI.Dirctions([2]float32{2, 40}, [2]float32{2, 40})
 	yayInstance = &Yay{
 		config:  *configuration,
 		servers: servers,
+		mapAPI:  mapAPI,
 	}
 	return yayInstance
 }
