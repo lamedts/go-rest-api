@@ -2,6 +2,7 @@ package logger
 
 import (
 	"go-rest-api/config"
+	"go-rest-api/core/global"
 	"io"
 	"os"
 	"path"
@@ -11,19 +12,22 @@ import (
 
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var logLevel logrus.Level
 var primaryOutStream io.Writer
-var fileFormatter = logrus.TextFormatter{FullTimestamp: true}
+var fileFormatter = prefixed.TextFormatter{FullTimestamp: true, ForceFormatting: true}
 
 var (
 	appLogHook   logrus.Hook
 	warnLogHook  logrus.Hook
 	errorLogHook logrus.Hook
 
-	coreLogHook      logrus.Hook
-	datastoreLogHook logrus.Hook
+	coreLogHook       logrus.Hook
+	datastoreLogHook  logrus.Hook
+	serverLogHook     logrus.Hook
+	apiRequestLogHook logrus.Hook
 )
 
 func init() {
@@ -63,18 +67,23 @@ func init() {
 		getPathMap(path.Join(config.LogPath, "datastore.log")),
 		&fileFormatter,
 	)
+	serverLogHook = lfshook.NewHook(
+		getPathMap(path.Join(config.LogPath, "server.log")),
+		&fileFormatter,
+	)
+	apiRequestLogHook = lfshook.NewHook(
+		getPathMap(path.Join(config.LogPath, "apiRequest.log")),
+		&fileFormatter,
+	)
 
 }
 
 func setPrimaryOutStream() {
-	appEnv := os.Getenv("APP_ENV")
-	switch strings.ToUpper(appEnv) {
-	case "DEBUG", "TEST":
+	logLevel = logrus.InfoLevel
+	primaryOutStream = ioutil.Discard // abandone output
+	if global.DebugMode {
 		logLevel = logrus.DebugLevel
 		primaryOutStream = os.Stdout
-	default:
-		logLevel = logrus.InfoLevel
-		primaryOutStream = ioutil.Discard // abandone output
 	}
 }
 
@@ -105,6 +114,10 @@ func GetLogger(module string) *logrus.Entry {
 		logger.AddHook(coreLogHook)
 	case "datastore":
 		logger.AddHook(datastoreLogHook)
+	case "server", "api":
+		logger.AddHook(serverLogHook)
+	case "apiRequest":
+		logger.AddHook(apiRequestLogHook)
 	}
 
 	return logger.WithField("prefix", module)

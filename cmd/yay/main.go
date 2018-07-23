@@ -1,6 +1,8 @@
 package main
 
 import (
+	"go-rest-api/core/global"
+	"go-rest-api/types"
 	"os"
 	"path"
 	"time"
@@ -8,11 +10,11 @@ import (
 	"fmt"
 
 	"go-rest-api/config"
-	. "go-rest-api/core"
+	"go-rest-api/core"
+	yayerror "go-rest-api/errors"
 	"go-rest-api/logger"
 
 	"github.com/coreos/go-systemd/daemon"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -29,7 +31,7 @@ var (
 )
 
 var cfgFile string
-var mainLogger *logrus.Entry = logger.GetLogger("main")
+var mainLogger = logger.GetLogger("main")
 
 func init() {
 	if len(BUILD_DATE) == 0 {
@@ -38,7 +40,7 @@ func init() {
 	cobra.OnInitialize()
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(configCmd)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "zakkaya config yaml file")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config yaml file")
 }
 
 var RootCmd = &cobra.Command{
@@ -88,7 +90,7 @@ var configCmd = &cobra.Command{
 func main() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
-		os.Exit(zerror.EXITCODE_PROGRAM_COMMAND_ERROR)
+		os.Exit(yayerror.EXITCODE_PROGRAM_COMMAND_ERROR)
 	}
 }
 
@@ -100,17 +102,21 @@ func yay() {
 	mainLogger.Infoln("----------------------------------------")
 	mainLogger.Infoln("****************************************")
 	mainLogger.Infoln("----------------------------------------")
-	mainLogger.Infoln("Starting zakkaya version:", versionString)
+	if global.DebugMode {
+		mainLogger.Warnf("Starting app in debug mode")
+	} else {
+		mainLogger.Infoln("Starting version:", versionString)
+	}
 	configuration := loadConfig()
-	zakkaya := zakkayaSetup(configuration, versionString)
+	yay := yaySetup(configuration)
 
 	daemon.SdNotify(false, "READY=1")
 
-	mainLogger.Infoln("Finished zakkaya Configuration and Setup")
+	mainLogger.Infoln("Finished Configuration and Setup")
 	mainLogger.Infoln("----------------------------------------")
-	zakkaya.Start()
+	yay.Start()
 	mainLogger.Infoln("-------------------------")
-	mainLogger.Infoln("zakkaya Start Serving Now")
+	mainLogger.Infoln("Start Serving Now")
 	mainLogger.Infoln("-------------------------")
 
 	<-quit
@@ -118,52 +124,25 @@ func yay() {
 
 var quit = make(chan bool)
 
-func loadConfig() *config.Config {
-	var configuration config.Config
-	useDefaultConfig := true
-	if len(cfgFile) > 0 {
-		if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-			useDefaultConfig = true
-		} else {
-			mainLogger.Infoln("Loading zakkaya configuration from", cfgFile)
-			if tmpConfig := config.LoadConfigFromYaml(cfgFile); tmpConfig == nil {
-				useDefaultConfig = true
-			} else {
-				configuration = *tmpConfig
-				useDefaultConfig = false
-			}
-		}
+func loadConfig() *types.Config {
+	var configuration types.Config
+	workingDir, _ := os.Getwd()
+	defaultConfigFile := path.Join(workingDir, types.DefaultConfigFilename)
+	if _, err := os.Stat(defaultConfigFile); os.IsNotExist(err) {
+		mainLogger.Errorf("No Configuartion file")
+		os.Exit(yayerror.EXITCODE_CONFIG_FILE_ERROR)
 	} else {
-		workingDir, _ := os.Getwd()
-		defaultConfigFile := path.Join(workingDir, config.DefaultConfigFilename)
-		if _, err := os.Stat(defaultConfigFile); os.IsNotExist(err) {
-			useDefaultConfig = true
+		if tmpConfig := config.LoadConfigFromYaml(defaultConfigFile); tmpConfig == nil {
+			mainLogger.Errorf("Cant load configuartion file")
+			os.Exit(yayerror.EXITCODE_CONFIG_FILE_ERROR)
 		} else {
-			if tmpConfig := config.LoadConfigFromYaml(defaultConfigFile); tmpConfig == nil {
-				useDefaultConfig = true
-			} else {
-				configuration = *tmpConfig
-				useDefaultConfig = false
-			}
-		}
-	}
-
-	if useDefaultConfig {
-		mainLogger.Infoln("Loading default zakkaya configuration")
-		configuration = config.DEFAULT_ZAKKAYA_CONFIG
-		if workingDir, err := os.Getwd(); err != nil {
-			mainLogger.Errorln("Failed to identify current working directory", err)
-			os.Exit(yayerror.EXITCODE_UNEXPECTED_ERROR)
-		} else {
-			if err := configuration.SaveConfigToYamlFile(path.Join(workingDir, config.DefaultConfigFilename)); err != nil {
-				mainLogger.Warnln("Failed to save config file to " + path.Join(workingDir, config.DefaultConfigFilename))
-			}
+			configuration = *tmpConfig
 		}
 	}
 	return &configuration
 }
 
-func yaySetup(configuration *config.Config, versionString string) *Yay {
+func yaySetup(configuration *types.Config) *core.Yay {
 	if configuration != nil {
 
 		if _, err := yaml.Marshal(*configuration); err == nil {
@@ -172,8 +151,8 @@ func yaySetup(configuration *config.Config, versionString string) *Yay {
 			// mainLogger.Debugf(string(bytes))
 		}
 
-		// zakkaya := GetZakkaya(configuration, versionString)
-		return GetYay(configuration, versionString)
+		// yay := GetYay(configuration, versionString)
+		return core.GetYay(configuration)
 	}
 	return nil
 }

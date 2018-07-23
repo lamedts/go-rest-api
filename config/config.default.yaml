@@ -1,0 +1,4 @@
+db:
+  type: mysql
+api_server:
+  port: 8080
