@@ -1,9 +1,11 @@
 package datastore
 
 import (
+	"errors"
 	"fmt"
 	"go-rest-api/types"
 	"go-rest-api/types/datastore"
+	"strings"
 	"sync"
 
 	"go-rest-api/logger"
@@ -59,19 +61,33 @@ func (db *mysqlDB) ReadOrder(page int, limit int) (bool, error) {
 	return true, nil
 }
 
-func (db *mysqlDB) UpdateOrder(orderID int) (bool, error) {
+// UpdateOrder
+// return (bool for isTaken, error)
+func (db *mysqlDB) UpdateOrder(orderID int, updateData map[string]interface{}) (bool, error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	// if _, err := db.NamedExec(`
-	// 	INSERT INTO settlement (settlement_date, details) VALUES (:settlement_date, :details)`, settlementData); err != nil {
-	// 	databaseLogger.WithFields(logrus.Fields{
-	// 		"Flow": "datastore",
-	// 		"func": "SaveSettlement",
-	// 	}).Warn(err)
-	// 	return false
-	// }
-	return true, nil
+	var (
+		cols   = ""
+		values = ""
+	)
+	for key := range updateData {
+		cols = cols + key + ","
+		values = values + updateData[key].(string) + ","
+	}
+	updateStmt := fmt.Sprintf(`UPDATE orders set %s = "%s" WHERE id = :order_id`, strings.TrimSuffix(cols, ","), strings.TrimSuffix(values, ","))
+	if result, err := db.NamedExec(updateStmt, map[string]interface{}{"order_id": orderID}); err != nil {
+		databaseLogger.WithFields(logrus.Fields{
+			"Flow": "datastore",
+			"func": "UpdateOrder",
+		}).Warn(err)
+		return false, err
+	} else if rowNum, _ := result.RowsAffected(); rowNum == 0 {
+		return true, nil
+	} else if rowNum == 1 {
+		return false, nil
+	}
+	return false, errors.New("Unknow")
 }
 
 func (db *mysqlDB) CreateOrder(order datastore.Order) (*datastore.Order, error) {
@@ -111,8 +127,9 @@ func (db *mysqlDB) CreateOrder(order datastore.Order) (*datastore.Order, error) 
 	queryInterface := map[string]interface{}{
 		"origin_id":      insertOriginID,
 		"destination_id": insertedDestID,
+		"distance":       order.Distance,
 	}
-	if result, err := tx.NamedExec(`INSERT INTO orders (origin_id,destination_id) VALUES (:origin_id,:destination_id)`, queryInterface); err != nil {
+	if result, err := tx.NamedExec(`INSERT INTO orders (origin_id,destination_id,distance) VALUES (:origin_id,:destination_id,:distance)`, queryInterface); err != nil {
 		databaseLogger.WithFields(logrus.Fields{
 			"Flow":   "datastore",
 			"func":   "CreateOrder",
@@ -155,79 +172,7 @@ func (db *mysqlDB) CreateOrder(order datastore.Order) (*datastore.Order, error) 
 		order.ID = fetchedOrder.ID
 		order.CreatedTime = fetchedOrder.CreatedTime
 		order.UpdatedTime = fetchedOrder.UpdatedTime
-		databaseLogger.Infof("%+v", order)
-
-		// if result, err := tx.Get(`SELECT * FROM orders WHERE id = :order_id`, map[string]interface{}{"order_id": insertOrderID}); err != nil {
-		// 	databaseLogger.WithFields(logrus.Fields{
-		// 		"Flow":   "datastore",
-		// 		"func":   "CreateOrder",
-		// 		"Action": "get orfer",
-		// 	}).Error(err)
-		// 	tx.Rollback()
-		// 	return nil, err
-		// } else {
-		// 	databaseLogger.Infof("%+v", result)
-		// }
-		// if err := tx.Commit(); err != nil {
-		// 	databaseLogger.WithFields(logrus.Fields{
-		// 		"Flow":   "datastore",
-		// 		"func":   "CreateOrder",
-		// 		"Action": "commit",
-		// 	}).Error(err)
-		// 	tx.Rollback()
-		// 	return nil, err
+		databaseLogger.Debugf("%+v", order)
+		return &order, nil
 	}
-	return nil, nil
-	// if insertDestStmt, err := tx.PrepareNamed(`INSERT INTO orders_destination (latitude,longtitude) VALUES (:latitude,:longtitude);SELECT LAST_INSERT_ID();`); err != nil {
-	// 	databaseLogger.WithFields(logrus.Fields{
-	// 		"Flow":   "datastore",
-	// 		"func":   "CreateOrder",
-	// 		"Action": "Insert orders_destination",
-	// 	}).Error(err)
-	// 	tx.Rollback()
-	// 	return nil, err
-	// } else if insertOrigStmt, err := tx.PrepareNamed(`INSERT INTO orders_origin (latitude,longtitude) VALUES (:latitude,:longtitude);SELECT LAST_INSERT_ID();`); err != nil {
-	// 	databaseLogger.WithFields(logrus.Fields{
-	// 		"Flow":   "datastore",
-	// 		"func":   "CreateOrder",
-	// 		"Action": "Insert orders_origin",
-	// 	}).Error(err)
-	// 	tx.Rollback()
-	// 	return nil, err
-	// } else {
-	// 	// insert location info
-	// order.OrderDestination = &insertedDest
-	// order.OrderOrigin = &insertOrigin
-	// 	if orderStmt, err := tx.PrepareNamed(`INSERT INTO orders (origin_id,destination_id) VALUES (:origin_id,:destination_id);`); err != nil {
-	// 		databaseLogger.WithFields(logrus.Fields{
-	// 			"Flow":   "datastore",
-	// 			"func":   "CreateOrder",
-	// 			"Action": "InsertOrder",
-	// 		}).Error(err)
-	// 		tx.Rollback()
-	// 		return nil, err
-	// 	} else {
-
-	// 		var insertedOrder datastore.Order
-	// 		if err := orderStmt.Get(&insertedOrder, &queryInterface); err != nil {
-	// 			databaseLogger.WithFields(logrus.Fields{
-	// 				"Flow":   "datastore",
-	// 				"func":   "CreateOrder",
-	// 				"Action": "Get Order",
-	// 			}).Error(err)
-	// 			tx.Rollback()
-	// 			return nil, err
-	// 		} else if err := tx.Commit(); err != nil {
-	// 			databaseLogger.WithFields(logrus.Fields{
-	// 				"Flow":   "datastore",
-	// 				"func":   "CreateOrder",
-	// 				"Action": "Get Order",
-	// 			}).Error(err)
-	// 			tx.Rollback()
-	// 			return nil, err
-	// 		}
-	// 		databaseLogger.Infof("%+v", order)
-	// 		return &order, nil
-	// 	}
-	// }
 }

@@ -14,6 +14,7 @@ const (
 type Order struct {
 	ID               int       `db:"id" json:"order_id"`
 	Status           string    `db:"status" json:"status"`
+	Distance         float32   `db:"distance" json:"distance"`
 	UpdatedTime      time.Time `db:"updated_at" json:"updated_at"`
 	CreatedTime      time.Time `db:"created_at" json:"created_at"`
 	OrderDestination *OrderDestination

@@ -7,7 +7,7 @@ const (
 )
 
 type OrderDataStore interface {
-	UpdateOrder(orderID int) (bool, error)
+	UpdateOrder(orderID int, updateData map[string]interface{}) (bool, error)
 	ReadOrder(page int, limit int) (bool, error)
 	CreateOrder(order Order) (*Order, error)
 }
