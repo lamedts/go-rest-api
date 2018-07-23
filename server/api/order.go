@@ -41,7 +41,32 @@ func (server *APIServer) OrderHandler(w http.ResponseWriter, r *http.Request) {
 
 // listOrder is to list all order according some param
 func (server *APIServer) listOrder(page int, limit int) ([]byte, yayerror.APIError) {
-	return []byte(`{"action":"listOrder"}`), yayerror.APIError{}
+	customAPI500 := yayerror.API500
+	if orders, err := server.db.ReadOrder(page, limit); err != nil {
+		APILogger.Warnf("Error when listing: %+v", err)
+		customAPI500.Error = err.Error()
+		return nil, customAPI500
+	} else if orders != nil {
+		type orderJSON = struct {
+			ID       int     `json:"id"`
+			Distance float32 `json:"distance"`
+			Status   string  `json:"status"`
+		}
+		var ordersJSON []orderJSON
+		for _, order := range *orders {
+			tmpJSON := orderJSON{
+				ID:       order.ID,
+				Distance: order.Distance,
+				Status:   order.Status,
+			}
+			ordersJSON = append(ordersJSON, tmpJSON)
+		}
+		returnJSON, _ := json.Marshal(ordersJSON)
+		return []byte(returnJSON), yayerror.APIError{}
+	}
+	APILogger.Warnf("Unknow Error when doing listOrder request")
+	customAPI500.Error = "Unknow Error"
+	return nil, customAPI500
 }
 
 // createOrder is to place order
@@ -80,7 +105,7 @@ func (server *APIServer) createOrder(requestData io.ReadCloser) ([]byte, yayerro
 		order.Distance = 19
 
 		if order, err := server.db.CreateOrder(order); err != nil {
-			APILogger.Warnf("Eror when created: %+v", err)
+			APILogger.Warnf("Eror when creating: %+v", err)
 			customAPI500.Error = err.Error()
 			return nil, customAPI500
 		} else if order != nil {

@@ -46,19 +46,45 @@ func NewMysqlDB(mysqlConfig types.DatastoreSettings) *mysqlDB {
 /**
  * order CRUD
  */
-func (db *mysqlDB) ReadOrder(page int, limit int) (bool, error) {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+func (db *mysqlDB) ReadOrder(page int, limit int) (*[]datastore.Order, error) {
+	offset := limit*page - limit
+	queryInterface := map[string]interface{}{
+		"offset":  offset,
+		"limit":   limit,
+		"orderBy": "id",
+	}
+	tx, _ := db.Beginx()
 
-	// if _, err := db.NamedExec(`
-	// 	INSERT INTO settlement (settlement_date, details) VALUES (:settlement_date, :details)`, settlementData); err != nil {
-	// 	databaseLogger.WithFields(logrus.Fields{
-	// 		"Flow": "datastore",
-	// 		"func": "SaveSettlement",
-	// 	}).Warn(err)
-	// 	return false
-	// }
-	return true, nil
+	if selectStmt, err := tx.PrepareNamed(`SELECT id, distance, status FROM orders ORDER BY :orderBy LIMIT :offset, :limit`); err != nil {
+		databaseLogger.WithFields(logrus.Fields{
+			"Flow":   "datastore",
+			"func":   "ReadOrder",
+			"Action": "prepare get order",
+		}).Error(err)
+		tx.Rollback()
+		return nil, err
+	} else {
+		var fetchedOrders []datastore.Order
+		if err := selectStmt.Select(&fetchedOrders, queryInterface); err != nil {
+			databaseLogger.WithFields(logrus.Fields{
+				"Flow":   "datastore",
+				"func":   "ReadOrder",
+				"Action": "Get Order",
+			}).Error(err)
+			tx.Rollback()
+			return nil, err
+		} else if err := tx.Commit(); err != nil {
+			databaseLogger.WithFields(logrus.Fields{
+				"Flow":   "datastore",
+				"func":   "ReadOrder",
+				"Action": "commit",
+			}).Error(err)
+			tx.Rollback()
+			return nil, err
+		}
+		databaseLogger.Debugf("%+v", fetchedOrders)
+		return &fetchedOrders, nil
+	}
 }
 
 // UpdateOrder
