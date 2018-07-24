@@ -1,6 +1,7 @@
 package core
 
 import (
+	"go-rest-api/core/proxy"
 	"go-rest-api/datastore"
 	"go-rest-api/logger"
 	"go-rest-api/server/api"
@@ -14,7 +15,7 @@ var coreLogger = logger.GetLogger("core")
 type Yay struct {
 	config  types.Config
 	servers []types.Server
-	mapAPI  *googlemapapi.GoogleMapAPI
+	proxy   *proxy.Proxy
 }
 
 var yayInstance *Yay
@@ -52,22 +53,7 @@ func GetYay(configuration *types.Config) *Yay {
 		return nil
 	}
 
-	coreLogger.Infoln("**          server Setup         **")
-	servers := []types.Server{}
-	if configuration.ServerSettings.APIServerConfig != nil {
-		if apiServer := api.NewAPIServer(dataStore, configuration.ServerSettings.APIServerConfig.Port); apiServer == nil {
-			coreLogger.Fatal("Failed to create apiserver")
-		} else {
-			servers = append(servers, apiServer)
-		}
-	}
-	if configuration.ServerSettings.GraphqlServerConfig != nil {
-		// TODO: graphql
-		coreLogger.Infof("implementation of graphql is pending")
-		// servers = append(servers, apiServer)
-	}
-
-	coreLogger.Infoln("**         utility Setup         **")
+	coreLogger.Infoln("**   proxy server utility Setup  **")
 	var mapAPI *googlemapapi.GoogleMapAPI
 	if configuration.UtilitySettings.GoogleMapAPIConfig != nil {
 		if utility := googlemapapi.NewGoogleMapAPI(configuration.UtilitySettings.GoogleMapAPIConfig.Key); utility == nil {
@@ -76,11 +62,30 @@ func GetYay(configuration *types.Config) *Yay {
 			mapAPI = utility
 		}
 	}
-	mapAPI.Dirctions([2]float32{2, 40}, [2]float32{2, 40})
+	proxy := proxy.NewProxy(dataStore, mapAPI)
+	if proxy == nil {
+		coreLogger.Fatal("Proxy not created")
+		return nil
+	}
+
+	servers := []types.Server{}
+	if configuration.ServerSettings.APIServerConfig != nil {
+		if apiServer := api.NewAPIServer(proxy, dataStore, mapAPI, configuration.ServerSettings.APIServerConfig.Port); apiServer == nil {
+			coreLogger.Fatal("Failed to create apiserver")
+		} else {
+			servers = append(servers, apiServer)
+		}
+	}
+
+	if configuration.ServerSettings.GraphqlServerConfig != nil {
+		// TODO: graphql
+		coreLogger.Infof("implementation of graphql is pending")
+		// servers = append(servers, apiServer)
+	}
 	yayInstance = &Yay{
 		config:  *configuration,
 		servers: servers,
-		mapAPI:  mapAPI,
+		proxy:   proxy,
 	}
 	return yayInstance
 }

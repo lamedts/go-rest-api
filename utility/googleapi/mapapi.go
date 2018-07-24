@@ -1,9 +1,10 @@
 package googlemapapi
 
 import (
+	"errors"
 	"go-rest-api/logger"
+	"time"
 
-	"github.com/kr/pretty"
 	"golang.org/x/net/context"
 	"googlemaps.github.io/maps"
 )
@@ -27,16 +28,26 @@ func NewGoogleMapAPI(key string) *GoogleMapAPI {
 	return &googleMapAPI
 }
 
-func (googleMapAPI *GoogleMapAPI) Dirctions(orig [2]float32, dest [2]float32) {
+// mapAPI.Dirctions([2]float32{2, 40}, [2]float32{2, 40})
+func (googleMapAPI *GoogleMapAPI) Dirctions(originCoord string, destCoord string) (*time.Duration, *int, error) {
 
 	r := &maps.DirectionsRequest{
-		Origin:      "22.375036,114.194551",
-		Destination: "22.387436,114.208592",
+		Origin:      originCoord,
+		Destination: destCoord,
 	}
-	route, _, err := googleMapAPI.client.Directions(context.Background(), r)
+	routes, _, err := googleMapAPI.client.Directions(context.Background(), r)
 	if err != nil {
 		googleMapAPILogger.Errorf("fatal error: %s", err)
+		return nil, nil, err
 	}
-	googleMapAPILogger.Infof("fatal error: %v", route)
-	pretty.Println(route)
+
+	// A route with no waypoints will contain exactly one leg within the legs array.
+	// Route represents a single route between an origin and a destination.
+	//
+	// pretty.Println(routes[0].Legs[0].Distance)
+	// pretty.Println(routes[0].Legs[0].Duration)
+	if len(routes) == 1 && len(routes[0].Legs) == 1 {
+		return &routes[0].Legs[0].Duration, &routes[0].Legs[0].Distance.Meters, nil
+	}
+	return nil, nil, errors.New("Unexpected response from google map api")
 }

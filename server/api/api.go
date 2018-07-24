@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"go-rest-api/core/proxy"
 	"go-rest-api/logger"
 	"go-rest-api/types/datastore"
+	"go-rest-api/utility/googleapi"
 	"net/http"
 	"os"
 	"strconv"
@@ -25,13 +27,15 @@ type APIServer struct {
 	port       int
 	httpserver *http.Server
 	logger     *logrus.Entry
+	proxy      *proxy.Proxy
 	db         datastore.DataStore
+	mapapi     *googlemapapi.GoogleMapAPI
 
 	_stopChannel chan bool
 	_serving     bool
 }
 
-func NewAPIServer(db datastore.DataStore, port int) *APIServer {
+func NewAPIServer(proxy *proxy.Proxy, db datastore.DataStore, mapapi *googlemapapi.GoogleMapAPI, port int) *APIServer {
 	httpserver := &http.Server{
 		Addr:         ":" + strconv.Itoa(port),
 		ReadTimeout:  90 * time.Second,
@@ -41,7 +45,9 @@ func NewAPIServer(db datastore.DataStore, port int) *APIServer {
 	apiServer := APIServer{
 		port:       port,
 		httpserver: httpserver,
+		proxy:      proxy,
 		db:         db,
+		mapapi:     mapapi,
 		logger:     APILogger,
 	}
 

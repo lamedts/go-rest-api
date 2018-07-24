@@ -101,8 +101,14 @@ func (server *APIServer) createOrder(requestData io.ReadCloser) ([]byte, yayerro
 			customAPI500.Error = "Parse Float error"
 			return nil, customAPI500
 		}
-		// google api
-		order.Distance = 19
+
+		_, distance, err := server.mapapi.Dirctions(locationData.Origin[0]+","+locationData.Origin[1], locationData.Destination[0]+","+locationData.Destination[1])
+		if err != nil {
+			APILogger.Warnf("Error when calling googleapi: %+v", err)
+			customAPI500.Error = err.Error()
+			return nil, customAPI500
+		}
+		order.Distance = float32(*distance)
 
 		if order, err := server.db.CreateOrder(order); err != nil {
 			APILogger.Warnf("Eror when creating: %+v", err)
