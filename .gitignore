@@ -41,6 +41,6 @@ Vagrantfile
 **/*.bak
 vendor
 build/**
-log/**
+**/log/**
 devConfig/**
 docker/build/**

@@ -9,7 +9,8 @@
     - list orders
 3. Using direction api from google api
 4. Mysql as DB
-5. using `start.sh` to do all the initialisation and installation
+5. using `start.sh` to do all the initialisation and installation using docker
+6. simple unit test - `./server/api/order_test.go`
 
 ## To run
 ```sh
