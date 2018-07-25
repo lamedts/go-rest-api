@@ -10,7 +10,9 @@ RUN mkdir -p /var/log/yay
 RUN chown -R yay /var/log/yay
 RUN chown -R yay /var/yay
 
+RUN apt-get update
 # RUN apt-get install -y sudo
+RUN apt-get install -y ca-certificates
 
 # copy binary bundle
 RUN mkdir - p /opt/yay
