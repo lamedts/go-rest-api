@@ -2,11 +2,8 @@
 
 # sudo docker build -t go-rest-api docker/
 # sudo docker run -p 8080:8080 go-rest-api 
-
 # sudo docker run -d -it -p 27017:27017 --name=go-rest-api-1 go-rest-api /bin/sh
 # sudo docker exec -i -t go-rest-api-1 /bin/bash
-
-
 # docker-compose up -d
 
 ##
@@ -33,7 +30,7 @@ fi
 cd docker
 OS=$(uname -s)
 if [[ "$OS" == "Darwin" ]]; then
-    docker-compose up 
+    docker-compose up --build
 else
-    sudo docker-compose up
+    sudo docker-compose up --build
 fi
