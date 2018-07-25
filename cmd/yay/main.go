@@ -129,7 +129,7 @@ func loadConfig() *types.Config {
 	workingDir, _ := os.Getwd()
 	defaultConfigFile := path.Join(workingDir, types.DefaultConfigFilename)
 	if _, err := os.Stat(defaultConfigFile); os.IsNotExist(err) {
-		mainLogger.Errorf("No Configuartion file")
+		mainLogger.Errorf("No Configuartion file in: %+v", defaultConfigFile)
 		os.Exit(yayerror.EXITCODE_CONFIG_FILE_ERROR)
 	} else {
 		if tmpConfig := config.LoadConfigFromYaml(defaultConfigFile); tmpConfig == nil {

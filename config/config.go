@@ -23,7 +23,7 @@ func init() {
 	}
 	if _, err := os.Stat(LogPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(LogPath, 0755); err != nil {
-			log.Warnln(err)
+			log.Errorf("Cant mkdir for log: %+v", err)
 		} else {
 			log.Infoln("Directory", LogPath, "is now created")
 		}

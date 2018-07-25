@@ -1,10 +1,10 @@
 db:
   type: mysql
   user: root
-  password: 
+  password: yay
   port: 3306
   host: localhost
-  dbname: 
+  dbname: yay
 server:
   api:
     port: 8080
