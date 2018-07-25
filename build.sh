@@ -34,7 +34,7 @@ elif [ $# == 4 ]; then
 	VERSION_RELEASE=$3
     COMPRESSION_METHOD="xz"
 else
-    echo "Error: Not enough parameters, enter either 3 or none parameters"
+    echo "Error: Not enough parameters, enter either 4 or none parameters"
     exit 1;
 fi
 
@@ -136,3 +136,14 @@ if [ -d $DOCKER_BUILD_DIR ]; then
 fi
 mkdir $DOCKER_BUILD_DIR
 cp -r * $DOCKER_BUILD_DIR
+cp ../config/config.yaml $DOCKER_BUILD_DIR
+echo $DOCKER_BUILD_DIR
+pwd
+echo -n "GOOGLE API KEY: "
+read GOOGLEAPIKEY
+OS=$(uname -s)
+if [[ "$OS" == "Darwin" ]]; then
+    sed -i '.bak' "s/GOOGLEAPIKEY/$GOOGLEAPIKEY/g" $DOCKER_BUILD_DIR/linux_x64/config.yaml 
+else
+    sed -i "s/GOOGLEAPIKEY/$GOOGLEAPIKEY/g" $DOCKER_BUILD_DIR/linux_x64/config.yaml 
+fi

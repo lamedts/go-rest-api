@@ -3,7 +3,7 @@ db:
   user: root
   password: yay
   port: 3306
-  host: localhost
+  host: mysql
   dbname: yay
 server:
   api:
@@ -11,4 +11,4 @@ server:
   graphql:
 utility: 
   googlemapapi:
-    key: 
+    key: GOOGLEAPIKEY
